@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ClaimsBuddy | Claims Journey Mockup</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="bg-shape bg-shape-a"></div>
+    <div class="bg-shape bg-shape-b"></div>
+
+    <header class="topbar">
+      <div class="brand">ClaimsBuddy</div>
+      <nav class="main-nav" aria-label="Primary">
+        <button class="nav-btn is-active" data-screen="intro">Intro</button>
+        <button class="nav-btn" data-screen="form">Submit Claim</button>
+        <button class="nav-btn" data-screen="status">Claim Status</button>
+      </nav>
+    </header>
+
+    <main class="container">
+      <section class="screen is-visible" id="screen-intro" aria-labelledby="intro-title">
+        <div class="hero card reveal">
+          <p class="eyebrow">Insurance Claims Experience</p>
+          <h1 id="intro-title">ClaimsBuddy</h1>
+          <p>
+            A streamlined, transparent interface that helps customers submit and track claims with
+            confidence. The demo focuses on a smooth claim journey and proactive notifications at
+            every important transition.
+          </p>
+          <button class="btn btn-primary" id="start-claim-btn">Start a Claim</button>
+        </div>
+
+        <div class="grid-two">
+          <article class="card reveal delay-1">
+            <h2>Claim Journey</h2>
+            <ol class="journey-list">
+              <li>Start Claim</li>
+              <li>Claim Submitted</li>
+              <li>Under Review (for complex cases)</li>
+              <li>Approved or Rejected</li>
+            </ol>
+            <p class="muted">
+              Simple claims can be auto-approved or auto-rejected based on rules. Complex claims are
+              routed to human review.
+            </p>
+          </article>
+
+          <article class="card reveal delay-2">
+            <h2>Documents Required</h2>
+            <ul class="doc-list">
+              <li>Government-issued photo ID</li>
+              <li>Policy number or policy document</li>
+              <li>Incident summary and date</li>
+              <li>Supporting evidence (photos, invoices, reports)</li>
+              <li>Bank details (if reimbursement applies)</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="screen" id="screen-form" aria-labelledby="form-title">
+        <article class="card reveal">
+          <h2 id="form-title">Submit a New Claim</h2>
+          <p class="muted">Step through the claim form and submit for processing.</p>
+
+          <div class="progress-shell" aria-label="Form progress">
+            <div class="progress-track">
+              <div class="progress-fill" id="form-progress-fill"></div>
+            </div>
+            <p id="form-progress-label">Step 1 of 4</p>
+          </div>
+
+          <form id="claim-form" novalidate>
+            <div class="form-step is-visible" data-step="1">
+              <h3>Claimant Details</h3>
+              <div class="field-grid">
+                <label>
+                  Full Name
+                  <input type="text" name="fullName" required placeholder="Alex Johnson" />
+                </label>
+                <label>
+                  Email
+                  <input type="email" name="email" required placeholder="alex@email.com" />
+                </label>
+                <label>
+                  Policy Number
+                  <input type="text" name="policyNumber" required placeholder="POL-12345" />
+                </label>
+              </div>
+            </div>
+
+            <div class="form-step" data-step="2">
+              <h3>Incident Details</h3>
+              <div class="field-grid">
+                <label>
+                  Incident Date
+                  <input type="date" name="incidentDate" required />
+                </label>
+                <label>
+                  Claim Type
+                  <select name="claimType" required>
+                    <option value="">Select type</option>
+                    <option value="vehicle">Vehicle</option>
+                    <option value="health">Health</option>
+                    <option value="property">Property</option>
+                  </select>
+                </label>
+                <label>
+                  Claim Amount (USD)
+                  <input type="number" name="claimAmount" min="0" required placeholder="1200" />
+                </label>
+              </div>
+            </div>
+
+            <div class="form-step" data-step="3">
+              <h3>Supporting Documents</h3>
+              <div class="field-grid">
+                <label>
+                  Upload Evidence
+                  <input type="file" name="evidence" multiple />
+                </label>
+                <label>
+                  Supporting Note
+                  <textarea
+                    name="description"
+                    rows="4"
+                    required
+                    placeholder="Briefly describe what happened"
+                  ></textarea>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-step" data-step="4">
+              <h3>Review and Submit</h3>
+              <p>Review your details and submit your claim.</p>
+              <label class="checkbox-line">
+                <input type="checkbox" name="confirm" required />
+                I confirm the information provided is accurate.
+              </label>
+            </div>
+
+            <p class="validation-msg" id="validation-msg"></p>
+
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" id="prev-step-btn" disabled>
+                Previous
+              </button>
+              <button type="button" class="btn btn-primary" id="next-step-btn">Next</button>
+              <button type="submit" class="btn btn-accent" id="submit-claim-btn" hidden>
+                Submit Claim
+              </button>
+            </div>
+          </form>
+        </article>
+      </section>
+
+      <section class="screen" id="screen-status" aria-labelledby="status-title">
+        <article class="card reveal">
+          <h2 id="status-title">Claim Status</h2>
+          <p class="muted">Track progress and simulate transitions in this demo.</p>
+
+          <div class="timeline" id="status-timeline" aria-label="Claim lifecycle">
+            <div class="node" data-state="start">
+              <span class="dot"></span>
+              <span>Start Claim</span>
+            </div>
+            <div class="line"></div>
+            <div class="node" data-state="submitted">
+              <span class="dot"></span>
+              <span>Claim Submitted</span>
+            </div>
+            <div class="line"></div>
+            <div class="node" data-state="review">
+              <span class="dot"></span>
+              <span>Under Review</span>
+            </div>
+            <div class="line"></div>
+            <div class="node" data-state="approved">
+              <span class="dot"></span>
+              <span>Approved</span>
+            </div>
+            <div class="line"></div>
+            <div class="node reject-node" data-state="rejected">
+              <span class="dot"></span>
+              <span>Rejected</span>
+            </div>
+          </div>
+
+          <div class="status-panel">
+            <p>
+              Current State:
+              <strong id="current-state">Start Claim</strong>
+            </p>
+            <p id="decision-explainer" class="muted">
+              Submit a claim to trigger auto-decision rules or manual review.
+            </p>
+          </div>
+
+          <div class="review-actions" id="review-actions" hidden>
+            <button class="btn btn-accent" id="approve-btn">Approve Claim</button>
+            <button class="btn btn-danger" id="reject-btn">Reject Claim</button>
+          </div>
+
+          <article class="email-preview">
+            <h3>Latest Email Notification</h3>
+            <p class="muted">Sent on each transition except Start Claim.</p>
+            <pre id="email-template-preview">No notifications sent yet.</pre>
+          </article>
+
+          <article class="email-log">
+            <h3>Notification Log</h3>
+            <ul id="notification-log"></ul>
+          </article>
+        </article>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
