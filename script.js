@@ -14,6 +14,7 @@ const progressFill = document.getElementById('form-progress-fill');
 const progressLabel = document.getElementById('form-progress-label');
 const validationMsg = document.getElementById('validation-msg');
 const stepPills = Array.from(document.querySelectorAll('[data-step-pill]'));
+const decisionPreviewText = document.getElementById('decision-preview-text');
 
 const stateLabel = document.getElementById('current-state');
 const decisionExplainer = document.getElementById('decision-explainer');
@@ -195,6 +196,28 @@ function evaluateAutoDecision() {
   transitionTo('review');
 }
 
+function updateDecisionPreview() {
+  const amount = Number(form.claimAmount.value || 0);
+  const descLength = (form.description.value || '').trim().length;
+
+  if (!amount && !descLength) {
+    decisionPreviewText.textContent = 'Pending input';
+    return;
+  }
+
+  if (amount <= 2500 && descLength >= 25) {
+    decisionPreviewText.textContent = 'Likely auto-approval';
+    return;
+  }
+
+  if (amount > 2500 && descLength < 25) {
+    decisionPreviewText.textContent = 'Likely auto-rejection';
+    return;
+  }
+
+  decisionPreviewText.textContent = 'Likely routed to Under Review';
+}
+
 navButtons.forEach((btn) => {
   btn.addEventListener('click', () => {
     showScreen(btn.dataset.screen);
@@ -249,6 +272,10 @@ rejectBtn.addEventListener('click', () => {
   transitionTo('rejected');
 });
 
+form.claimAmount.addEventListener('input', updateDecisionPreview);
+form.description.addEventListener('input', updateDecisionPreview);
+
 updateStepUI();
 transitionTo('start');
+updateDecisionPreview();
 showScreen('intro');

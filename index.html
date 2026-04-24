@@ -10,6 +10,10 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -40,7 +44,7 @@
             <span class="tag">Auto decisioning</span>
             <span class="tag">Email transition alerts</span>
           </div>
-          <button class="btn btn-primary" id="start-claim-btn">Start a Claim</button>
+          <button class="btn btn-primary btn-start-claim" id="start-claim-btn">Start a Claim</button>
         </div>
 
         <div class="grid-two">
@@ -69,6 +73,57 @@
             </ul>
           </article>
         </div>
+
+        <article class="card pipeline-card reveal delay-2">
+          <h2>Review Pipeline</h2>
+          <p class="muted">Your claim moves through these stages from start to decision.</p>
+          <div class="pipeline-flow" aria-label="Claim review pipeline">
+            <div class="pipeline-step">
+              <i class="bi bi-play-circle-fill" aria-hidden="true"></i>
+              <span>Start Claim</span>
+            </div>
+            <span class="pipeline-arrow" aria-hidden="true"><i class="bi bi-arrow-right"></i></span>
+            <div class="pipeline-step">
+              <i class="bi bi-folder2-open" aria-hidden="true"></i>
+              <span>Provide Documents</span>
+            </div>
+            <span class="pipeline-arrow" aria-hidden="true"><i class="bi bi-arrow-right"></i></span>
+            <div class="pipeline-step">
+              <i class="bi bi-send-check-fill" aria-hidden="true"></i>
+              <span>Claim Submitted</span>
+            </div>
+            <span class="pipeline-arrow" aria-hidden="true"><i class="bi bi-arrow-right"></i></span>
+            <div class="pipeline-step">
+              <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+              <span>Under Review</span>
+            </div>
+            <span class="pipeline-arrow" aria-hidden="true"><i class="bi bi-arrow-right"></i></span>
+            <div class="pipeline-step pipeline-step-outcome">
+              <i class="bi bi-check2-circle" aria-hidden="true"></i>
+              <span>Approved</span>
+            </div>
+            <span class="pipeline-divider">/</span>
+            <div class="pipeline-step pipeline-step-outcome reject">
+              <i class="bi bi-x-circle" aria-hidden="true"></i>
+              <span>Rejected</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="card contact-card reveal delay-2">
+          <h2>Contact Us</h2>
+          <p class="muted">Need help with your claim? Reach out to our support team.</p>
+          <div class="contact-list">
+            <a class="contact-item" href="tel:+10000000000" aria-label="Call support">
+              <i class="bi bi-telephone-fill" aria-hidden="true"></i>
+              <span>+1 (000) 000-0000</span>
+            </a>
+            <a class="contact-item" href="mailto:support@claimsbuddy.demo" aria-label="Email support">
+              <i class="bi bi-envelope-fill" aria-hidden="true"></i>
+              <span>support@claimsbuddy.demo</span>
+            </a>
+          </div>
+        </article>
       </section>
 
       <section class="screen" id="screen-form" aria-labelledby="form-title">
@@ -86,6 +141,9 @@
               <span class="step-pill" data-step-pill="2">2 Incident</span>
               <span class="step-pill" data-step-pill="3">3 Documents</span>
               <span class="step-pill" data-step-pill="4">4 Review</span>
+            </div>
+            <div class="decision-preview" id="decision-preview">
+              Predicted path: <strong id="decision-preview-text">Pending input</strong>
             </div>
           </div>
 
