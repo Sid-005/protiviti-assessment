@@ -682,6 +682,16 @@ textarea:focus {
   gap: 0.8rem;
 }
 
+.claim-reason-text {
+  margin: 0.65rem 0 0;
+  border-left: 3px solid rgba(17, 97, 71, 0.28);
+  padding: 0.35rem 0.55rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #3a4a50;
+  font-size: 0.88rem;
+}
+
 .ask-btn {
   margin-top: 0.75rem;
   border: 1px solid rgba(17, 97, 71, 0.24);

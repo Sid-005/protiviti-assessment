@@ -27,6 +27,7 @@ const claimsListEl = document.getElementById('claims-list');
 const claimDetailEl = document.getElementById('claim-detail');
 const detailClaimId = document.getElementById('detail-claim-id');
 const detailHeadline = document.getElementById('detail-headline');
+const detailReason = document.getElementById('detail-reason');
 const detailStatusBadge = document.getElementById('detail-status-badge');
 const detailPolicy = document.getElementById('detail-policy');
 const detailItem = document.getElementById('detail-item');
@@ -54,6 +55,7 @@ const policyCatalog = {
         label: 'Gadget Protection',
         details: 'Laptop/phone/tablet accidental damage or theft from home with forced entry',
         maxPayout: 'HKD 10,000',
+        maxPayoutAmount: 10000,
         submitWithin: '10 days',
       },
       {
@@ -61,6 +63,7 @@ const policyCatalog = {
         label: 'Home Contents Cover',
         details: 'Theft with forced entry, fire/smoke damage, or water damage to belongings',
         maxPayout: 'HKD 30,000',
+        maxPayoutAmount: 30000,
         submitWithin: '30 days',
       },
       {
@@ -68,6 +71,7 @@ const policyCatalog = {
         label: 'Personal / Third-Party Liability',
         details: 'Liability claims involving personal injury or third-party property loss',
         maxPayout: 'HKD 100,000',
+        maxPayoutAmount: 100000,
         submitWithin: '15 days',
       },
       {
@@ -75,6 +79,7 @@ const policyCatalog = {
         label: 'Burst Pipe / Water Leak Incident Support',
         details: 'Emergency support for burst pipe and related water leak incidents',
         maxPayout: 'HKD 5,000',
+        maxPayoutAmount: 5000,
         submitWithin: '7 days',
       },
     ],
@@ -87,6 +92,7 @@ const policyCatalog = {
         label: 'Trip Delay (6 hours or more)',
         details: 'Compensation for significant travel delay during trip',
         maxPayout: 'HKD 1,000',
+        maxPayoutAmount: 1000,
         submitWithin: '14 days',
       },
       {
@@ -94,6 +100,7 @@ const policyCatalog = {
         label: 'Gadget Protection',
         details: 'Lost/theft of laptop/phone/tablet overseas with police report',
         maxPayout: 'HKD 10,000',
+        maxPayoutAmount: 10000,
         submitWithin: '14 days',
       },
       {
@@ -101,6 +108,7 @@ const policyCatalog = {
         label: 'Lost Checked Baggage',
         details: 'Coverage for permanently lost checked baggage',
         maxPayout: 'HKD 5,000',
+        maxPayoutAmount: 5000,
         submitWithin: '7 days',
       },
       {
@@ -108,11 +116,33 @@ const policyCatalog = {
         label: 'Emergency Medical / Hospitalization Overseas',
         details: 'Emergency treatment and hospitalization while overseas',
         maxPayout: 'HKD 40,000',
+        maxPayoutAmount: 40000,
         submitWithin: '10 days',
       },
     ],
   },
+  other: {
+    label: 'Other',
+    items: [
+      {
+        id: 'other',
+        label: 'Other',
+        details: 'Claims outside supported policy items',
+        maxPayout: '-',
+        maxPayoutAmount: null,
+        submitWithin: '-',
+      },
+    ],
+  },
 };
+
+const requiredDocuments = [
+  { id: 'photo-id', label: 'Government-issued Photo ID' },
+  { id: 'policy-copy', label: 'Policy Copy / Policy Number Proof' },
+  { id: 'incident-proof', label: 'Incident Evidence (reports/photos)' },
+  { id: 'invoice-receipts', label: 'Bills / Invoices / Receipts' },
+  { id: 'bank-details', label: 'Bank Details for Reimbursement' },
+];
 
 const statusConfig = {
   submitted: {
@@ -209,11 +239,6 @@ function validateStep() {
   validationMsg.textContent = '';
 
   if (currentStep === 2) {
-    const selectedDocs = form.querySelectorAll('input[name="documents"]:checked');
-    if (selectedDocs.length === 0) {
-      validationMsg.textContent = 'Select at least one document before submitting your claim.';
-      return false;
-    }
     return true;
   }
 
@@ -250,6 +275,13 @@ function setClaimItemOptions(policyKey) {
     claimItemSelect.append(option);
   });
 
+  if (!policy.items.some((item) => item.id === 'other')) {
+    const otherOption = document.createElement('option');
+    otherOption.value = 'other';
+    otherOption.textContent = 'Other';
+    claimItemSelect.append(otherOption);
+  }
+
   claimItemMeta.hidden = true;
 }
 
@@ -268,8 +300,8 @@ function updateClaimItemMeta() {
     return;
   }
 
-  metaMaxPayout.textContent = selectedItem.maxPayout;
-  metaSubmitWindow.textContent = selectedItem.submitWithin;
+  metaMaxPayout.textContent = selectedItem.maxPayout || '-';
+  metaSubmitWindow.textContent = selectedItem.submitWithin || '-';
   claimItemMeta.hidden = false;
 }
 
@@ -363,18 +395,55 @@ function generateUniqueClaimId() {
   return fallback;
 }
 
-function determineAutoStatus(amount, description) {
-  const descLength = description.trim().length;
+function evaluateClaimDecision({ policyKey, claimItemId, selectedItem, amount, selectedDocumentIds }) {
+  const missingDocuments = requiredDocuments
+    .filter((doc) => !selectedDocumentIds.includes(doc.id))
+    .map((doc) => doc.label);
 
-  if (amount <= 2500 && descLength >= 25) {
-    return { status: 'approved', isComplex: false };
+  if (policyKey === 'other' || claimItemId === 'other') {
+    return {
+      status: 'rejected',
+      isComplex: false,
+      reason:
+        'Auto-rejected because "Other" was selected. This system currently handles only the listed policy claim items.',
+      missingDocuments,
+    };
   }
 
-  if (amount > 2500 && descLength < 25) {
-    return { status: 'rejected', isComplex: false };
+  if (!selectedItem || selectedItem.maxPayoutAmount == null) {
+    return {
+      status: 'review',
+      isComplex: true,
+      reason: 'Claim requires manual review because the selected item does not have a configured payout rule.',
+      missingDocuments,
+    };
   }
 
-  return { status: 'review', isComplex: true };
+  if (amount > selectedItem.maxPayoutAmount) {
+    return {
+      status: 'review',
+      isComplex: true,
+      reason:
+        `Claim amount exceeds maximum payout (${selectedItem.maxPayout}) allocated to this policy item and requires manual review.`,
+      missingDocuments,
+    };
+  }
+
+  if (missingDocuments.length > 0) {
+    return {
+      status: 'review',
+      isComplex: true,
+      reason: `Incomplete documents. Missing: ${missingDocuments.join(', ')}.`,
+      missingDocuments,
+    };
+  }
+
+  return {
+    status: 'approved',
+    isComplex: false,
+    reason: 'Auto-approved: claim amount is within max payout and all required documents were submitted.',
+    missingDocuments: [],
+  };
 }
 
 function addNotification(claim, state) {
@@ -425,6 +494,7 @@ function renderClaimsList() {
               <p class="meta-value">${formatDate(claim.updatedAt)}</p>
             </div>
           </div>
+          ${claim.reason ? `<p class="claim-reason-text">${claim.reason}</p>` : ''}
           <button type="button" class="ask-btn"><i class="bi bi-chat-left-text"></i> Ask Claim Buddy</button>
         </article>
       `;
@@ -451,6 +521,8 @@ function renderClaimDetail() {
 
   detailClaimId.textContent = claim.id;
   detailHeadline.textContent = cfg.detail;
+  detailReason.hidden = !claim.reason;
+  detailReason.textContent = claim.reason || '';
   detailStatusBadge.className = `status-badge ${cfg.badgeClass}`;
   detailStatusBadge.innerHTML = `<i class="bi ${cfg.icon}"></i> ${cfg.label}`;
   detailPolicy.textContent = `${claim.policy} (${claim.policyNumber})`;
@@ -551,7 +623,16 @@ form.addEventListener('submit', (event) => {
   const selectedPolicy = policyCatalog[policySelect.value];
   const selectedItem = getSelectedItem();
   const generatedId = generateUniqueClaimId();
-  const decision = determineAutoStatus(Number(form.claimAmount.value || 0), form.description.value || '');
+  const selectedDocumentIds = Array.from(form.querySelectorAll('input[name="documents"]:checked')).map(
+    (checkbox) => checkbox.value,
+  );
+  const decision = evaluateClaimDecision({
+    policyKey: policySelect.value,
+    claimItemId: claimItemSelect.value,
+    selectedItem,
+    amount: Number(form.claimAmount.value || 0),
+    selectedDocumentIds,
+  });
 
   const claim = {
     id: generatedId,
@@ -563,6 +644,9 @@ form.addEventListener('submit', (event) => {
     fullName: form.fullName.value.trim(),
     status: decision.status,
     isComplex: decision.isComplex,
+    reason: decision.reason,
+    submittedDocuments: selectedDocumentIds,
+    missingDocuments: decision.missingDocuments,
     updatedAt: new Date().toISOString(),
     notifications: [],
   };
