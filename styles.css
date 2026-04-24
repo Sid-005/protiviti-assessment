@@ -377,7 +377,7 @@ h1 {
 
 .step-pills {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.45rem;
 }
 
@@ -406,20 +406,6 @@ h1 {
   border-color: rgba(17, 97, 71, 0.25);
 }
 
-.decision-preview {
-  margin-top: 0.55rem;
-  border: 1px solid rgba(17, 97, 71, 0.2);
-  background: rgba(255, 255, 255, 0.78);
-  border-radius: 10px;
-  padding: 0.45rem 0.6rem;
-  font-size: 0.88rem;
-  color: var(--muted);
-}
-
-.decision-preview strong {
-  color: var(--ink);
-}
-
 .form-step {
   display: none;
 }
@@ -439,6 +425,106 @@ label {
   flex-direction: column;
   gap: 0.35rem;
   font-weight: 600;
+}
+
+label > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+label > span i {
+  color: var(--brand);
+}
+
+.field-span-2 {
+  grid-column: span 2;
+}
+
+.claim-item-meta {
+  margin-top: 0.9rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.meta-chip {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  border: 1px solid rgba(17, 97, 71, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 0.7rem;
+}
+
+.meta-chip i {
+  color: var(--brand);
+  font-size: 1.1rem;
+  margin-top: 0.2rem;
+}
+
+.meta-label,
+.meta-value {
+  margin: 0;
+}
+
+.meta-label {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.meta-value {
+  font-weight: 700;
+}
+
+.document-grid {
+  margin-top: 0.6rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.doc-option {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.6rem;
+  border: 1px solid rgba(17, 97, 71, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 0.65rem;
+  font-weight: 600;
+}
+
+.doc-option span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.doc-option i {
+  color: var(--brand);
+}
+
+.submitted-card {
+  margin-top: 0.4rem;
+  border: 1px solid rgba(17, 97, 71, 0.22);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.84);
+  padding: 0.9rem;
+}
+
+.submitted-title {
+  margin-top: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 700;
+}
+
+.submitted-title i {
+  color: var(--brand);
 }
 
 input,
@@ -635,6 +721,15 @@ pre {
   .grid-two,
   .field-grid,
   .step-pills {
+    grid-template-columns: 1fr;
+  }
+
+  .field-span-2 {
+    grid-column: auto;
+  }
+
+  .claim-item-meta,
+  .document-grid {
     grid-template-columns: 1fr;
   }
 

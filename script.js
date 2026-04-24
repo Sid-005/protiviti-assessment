@@ -14,7 +14,14 @@ const progressFill = document.getElementById('form-progress-fill');
 const progressLabel = document.getElementById('form-progress-label');
 const validationMsg = document.getElementById('validation-msg');
 const stepPills = Array.from(document.querySelectorAll('[data-step-pill]'));
-const decisionPreviewText = document.getElementById('decision-preview-text');
+const viewStatusBtn = document.getElementById('view-status-btn');
+const submittedClaimId = document.getElementById('submitted-claim-id');
+
+const policySelect = document.getElementById('insurance-policy');
+const claimItemSelect = document.getElementById('claim-item');
+const claimItemMeta = document.getElementById('claim-item-meta');
+const metaMaxPayout = document.getElementById('meta-max-payout');
+const metaSubmitWindow = document.getElementById('meta-submit-window');
 
 const stateLabel = document.getElementById('current-state');
 const decisionExplainer = document.getElementById('decision-explainer');
@@ -31,6 +38,75 @@ const nodes = {
   review: document.querySelector('.node[data-state="review"]'),
   approved: document.querySelector('.node[data-state="approved"]'),
   rejected: document.querySelector('.node[data-state="rejected"]'),
+};
+
+const policyCatalog = {
+  'peace-of-mind': {
+    label: 'Peace of Mind - Home and Contents Plan',
+    items: [
+      {
+        id: 'home-gadget-protection',
+        label: 'Gadget Protection',
+        details: 'Laptop/phone/tablet accidental damage or theft from home with forced entry',
+        maxPayout: 'HKD 10,000',
+        submitWithin: '10 days',
+      },
+      {
+        id: 'home-contents-cover',
+        label: 'Home Contents Cover',
+        details: 'Theft with forced entry, fire/smoke damage, or water damage to belongings',
+        maxPayout: 'HKD 30,000',
+        submitWithin: '30 days',
+      },
+      {
+        id: 'home-personal-liability',
+        label: 'Personal / Third-Party Liability',
+        details: 'Liability claims involving personal injury or third-party property loss',
+        maxPayout: 'HKD 100,000',
+        submitWithin: '15 days',
+      },
+      {
+        id: 'home-burst-pipe',
+        label: 'Burst Pipe / Water Leak Incident Support',
+        details: 'Emergency support for burst pipe and related water leak incidents',
+        maxPayout: 'HKD 5,000',
+        submitWithin: '7 days',
+      },
+    ],
+  },
+  traveltop: {
+    label: 'TravelTop - Travel Insurance Plan',
+    items: [
+      {
+        id: 'travel-trip-delay',
+        label: 'Trip Delay (6 hours or more)',
+        details: 'Compensation for significant travel delay during trip',
+        maxPayout: 'HKD 1,000',
+        submitWithin: '14 days',
+      },
+      {
+        id: 'travel-gadget-protection',
+        label: 'Gadget Protection',
+        details: 'Lost/theft of laptop/phone/tablet overseas with police report',
+        maxPayout: 'HKD 10,000',
+        submitWithin: '14 days',
+      },
+      {
+        id: 'travel-lost-baggage',
+        label: 'Lost Checked Baggage',
+        details: 'Coverage for permanently lost checked baggage',
+        maxPayout: 'HKD 5,000',
+        submitWithin: '7 days',
+      },
+      {
+        id: 'travel-emergency-medical',
+        label: 'Emergency Medical / Hospitalization Overseas',
+        details: 'Emergency treatment and hospitalization while overseas',
+        maxPayout: 'HKD 40,000',
+        submitWithin: '10 days',
+      },
+    ],
+  },
 };
 
 const emailTemplates = {
@@ -50,6 +126,8 @@ let claimContext = {
   claimId: 'N/A',
   name: 'Customer',
   email: '',
+  policy: '',
+  claimItem: '',
   amount: 0,
   isComplex: false,
 };
@@ -77,34 +155,82 @@ function updateStepUI() {
 
   const percent = (currentStep / steps.length) * 100;
   progressFill.style.width = `${percent}%`;
-  progressLabel.textContent = `Step ${currentStep} of ${steps.length}`;
+  progressLabel.textContent = `Stage ${currentStep} of ${steps.length}`;
 
-  prevStepBtn.disabled = currentStep === 1;
-  nextStepBtn.hidden = currentStep === steps.length;
-  submitClaimBtn.hidden = currentStep !== steps.length;
+  const isSubmittedPage = currentStep === steps.length;
+  prevStepBtn.disabled = currentStep === 1 || isSubmittedPage;
+  nextStepBtn.hidden = currentStep !== 1;
+  submitClaimBtn.hidden = currentStep !== 2;
+  prevStepBtn.hidden = isSubmittedPage;
 }
 
 function validateStep() {
   validationMsg.textContent = '';
+
+  if (currentStep === 2) {
+    const selectedDocs = form.querySelectorAll('input[name="documents"]:checked');
+    if (selectedDocs.length === 0) {
+      validationMsg.textContent = 'Select at least one document before submitting your claim.';
+      return false;
+    }
+    return true;
+  }
+
   const currentStepEl = steps[currentStep - 1];
   const requiredFields = Array.from(currentStepEl.querySelectorAll('[required]'));
 
   for (const field of requiredFields) {
-    if (field.type === 'checkbox') {
-      if (!field.checked) {
-        validationMsg.textContent = 'Please confirm the declaration before continuing.';
-        return false;
-      }
-      continue;
-    }
-
     if (!field.value.trim()) {
-      validationMsg.textContent = 'Please complete all required fields for this step.';
+      validationMsg.textContent = 'Please complete all required fields for this stage.';
       return false;
     }
   }
 
   return true;
+}
+
+function setClaimItemOptions(policyKey) {
+  const policy = policyCatalog[policyKey];
+  claimItemSelect.innerHTML = '';
+
+  if (!policy) {
+    claimItemSelect.disabled = true;
+    claimItemSelect.innerHTML = '<option value="">Select policy first</option>';
+    claimItemMeta.hidden = true;
+    return;
+  }
+
+  claimItemSelect.disabled = false;
+  claimItemSelect.innerHTML = '<option value="">Select your claim item</option>';
+
+  policy.items.forEach((item) => {
+    const option = document.createElement('option');
+    option.value = item.id;
+    option.textContent = item.label;
+    claimItemSelect.append(option);
+  });
+
+  claimItemMeta.hidden = true;
+}
+
+function getSelectedItem() {
+  const selectedPolicy = policyCatalog[policySelect.value];
+  if (!selectedPolicy) {
+    return null;
+  }
+  return selectedPolicy.items.find((item) => item.id === claimItemSelect.value) || null;
+}
+
+function updateClaimItemMeta() {
+  const selectedItem = getSelectedItem();
+  if (!selectedItem) {
+    claimItemMeta.hidden = true;
+    return;
+  }
+
+  metaMaxPayout.textContent = selectedItem.maxPayout;
+  metaSubmitWindow.textContent = selectedItem.submitWithin;
+  claimItemMeta.hidden = false;
 }
 
 function transitionTo(nextState) {
@@ -151,9 +277,7 @@ function transitionTo(nextState) {
   };
 
   decisionExplainer.textContent = explanations[currentState];
-
-  const showReviewButtons = currentState === 'review';
-  reviewActions.hidden = !showReviewButtons;
+  reviewActions.hidden = currentState !== 'review';
 
   if (nextState !== 'start') {
     sendEmailNotification(nextState);
@@ -175,8 +299,6 @@ function sendEmailNotification(state) {
 }
 
 function evaluateAutoDecision() {
-  // Simple rules: small amounts with sufficient note length auto-approve,
-  // suspiciously tiny notes on larger claims auto-reject, else manual review.
   const amount = Number(form.claimAmount.value || 0);
   const descLength = (form.description.value || '').trim().length;
 
@@ -196,26 +318,41 @@ function evaluateAutoDecision() {
   transitionTo('review');
 }
 
-function updateDecisionPreview() {
-  const amount = Number(form.claimAmount.value || 0);
-  const descLength = (form.description.value || '').trim().length;
+function getStoredClaimIds() {
+  try {
+    const raw = localStorage.getItem('claimsbuddy.generatedClaimIds');
+    const ids = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(ids) ? ids : []);
+  } catch {
+    return new Set();
+  }
+}
 
-  if (!amount && !descLength) {
-    decisionPreviewText.textContent = 'Pending input';
-    return;
+function storeClaimId(claimId) {
+  const ids = getStoredClaimIds();
+  ids.add(claimId);
+  localStorage.setItem('claimsbuddy.generatedClaimIds', JSON.stringify(Array.from(ids)));
+}
+
+function generateUniqueClaimId() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const existing = getStoredClaimIds();
+
+  for (let attempt = 0; attempt < 1000; attempt += 1) {
+    let randomPart = '';
+    for (let i = 0; i < 7; i += 1) {
+      randomPart += chars[Math.floor(Math.random() * chars.length)];
+    }
+    const id = `PRO-${randomPart}`;
+    if (!existing.has(id)) {
+      storeClaimId(id);
+      return id;
+    }
   }
 
-  if (amount <= 2500 && descLength >= 25) {
-    decisionPreviewText.textContent = 'Likely auto-approval';
-    return;
-  }
-
-  if (amount > 2500 && descLength < 25) {
-    decisionPreviewText.textContent = 'Likely auto-rejection';
-    return;
-  }
-
-  decisionPreviewText.textContent = 'Likely routed to Under Review';
+  const fallback = `PRO-${Date.now().toString().slice(-7)}`;
+  storeClaimId(fallback);
+  return fallback;
 }
 
 navButtons.forEach((btn) => {
@@ -228,6 +365,12 @@ startClaimBtn.addEventListener('click', () => {
   showScreen('form');
 });
 
+policySelect.addEventListener('change', () => {
+  setClaimItemOptions(policySelect.value);
+});
+
+claimItemSelect.addEventListener('change', updateClaimItemMeta);
+
 prevStepBtn.addEventListener('click', () => {
   if (currentStep > 1) {
     currentStep -= 1;
@@ -239,8 +382,9 @@ nextStepBtn.addEventListener('click', () => {
   if (!validateStep()) {
     return;
   }
-  if (currentStep < steps.length) {
-    currentStep += 1;
+
+  if (currentStep === 1) {
+    currentStep = 2;
     updateStepUI();
   }
 });
@@ -251,16 +395,29 @@ form.addEventListener('submit', (event) => {
     return;
   }
 
+  const selectedPolicy = policyCatalog[policySelect.value];
+  const selectedItem = getSelectedItem();
+  const generatedId = generateUniqueClaimId();
+  submittedClaimId.textContent = generatedId;
+
   claimContext = {
-    claimId: `CLM-${Math.floor(Math.random() * 900000 + 100000)}`,
+    claimId: generatedId,
     name: form.fullName.value.trim(),
     email: form.email.value.trim(),
+    policy: selectedPolicy ? selectedPolicy.label : '',
+    claimItem: selectedItem ? selectedItem.label : '',
     amount: Number(form.claimAmount.value || 0),
     isComplex: false,
   };
 
   transitionTo('submitted');
   evaluateAutoDecision();
+
+  currentStep = 3;
+  updateStepUI();
+});
+
+viewStatusBtn.addEventListener('click', () => {
   showScreen('status');
 });
 
@@ -272,10 +429,7 @@ rejectBtn.addEventListener('click', () => {
   transitionTo('rejected');
 });
 
-form.claimAmount.addEventListener('input', updateDecisionPreview);
-form.description.addEventListener('input', updateDecisionPreview);
-
 updateStepUI();
+setClaimItemOptions('');
 transitionTo('start');
-updateDecisionPreview();
 showScreen('intro');
