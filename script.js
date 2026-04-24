@@ -23,21 +23,26 @@ const claimItemMeta = document.getElementById('claim-item-meta');
 const metaMaxPayout = document.getElementById('meta-max-payout');
 const metaSubmitWindow = document.getElementById('meta-submit-window');
 
-const stateLabel = document.getElementById('current-state');
-const decisionExplainer = document.getElementById('decision-explainer');
-const reviewActions = document.getElementById('review-actions');
-const approveBtn = document.getElementById('approve-btn');
-const rejectBtn = document.getElementById('reject-btn');
+const claimsListEl = document.getElementById('claims-list');
+const claimDetailEl = document.getElementById('claim-detail');
+const detailClaimId = document.getElementById('detail-claim-id');
+const detailHeadline = document.getElementById('detail-headline');
+const detailStatusBadge = document.getElementById('detail-status-badge');
+const detailPolicy = document.getElementById('detail-policy');
+const detailItem = document.getElementById('detail-item');
+const detailAmount = document.getElementById('detail-amount');
+const detailUpdated = document.getElementById('detail-updated');
+const detailReviewActions = document.getElementById('detail-review-actions');
+const detailApproveBtn = document.getElementById('detail-approve-btn');
+const detailRejectBtn = document.getElementById('detail-reject-btn');
 const emailPreview = document.getElementById('email-template-preview');
 const notificationLog = document.getElementById('notification-log');
 
 const steps = Array.from(document.querySelectorAll('.form-step'));
-const nodes = {
-  start: document.querySelector('.node[data-state="start"]'),
-  submitted: document.querySelector('.node[data-state="submitted"]'),
-  review: document.querySelector('.node[data-state="review"]'),
-  approved: document.querySelector('.node[data-state="approved"]'),
-  rejected: document.querySelector('.node[data-state="rejected"]'),
+
+const STORAGE_KEYS = {
+  claimIds: 'claimsbuddy.generatedClaimIds',
+  claims: 'claimsbuddy.claims',
 };
 
 const policyCatalog = {
@@ -109,6 +114,33 @@ const policyCatalog = {
   },
 };
 
+const statusConfig = {
+  submitted: {
+    label: 'Claim Submitted',
+    badgeClass: 'badge-submitted',
+    icon: 'bi-send-check',
+    detail: 'Your claim has been submitted and is being validated.',
+  },
+  review: {
+    label: 'Under Review',
+    badgeClass: 'badge-review',
+    icon: 'bi-hourglass-split',
+    detail: 'Our team is reviewing the claim details and documents.',
+  },
+  approved: {
+    label: 'Approved',
+    badgeClass: 'badge-approved',
+    icon: 'bi-check2-circle',
+    detail: 'Great news. Your claim has been approved for payout processing.',
+  },
+  rejected: {
+    label: 'Rejected',
+    badgeClass: 'badge-rejected',
+    icon: 'bi-x-circle',
+    detail: 'Your claim was rejected based on policy checks and submitted details.',
+  },
+};
+
 const emailTemplates = {
   submitted: ({ name, claimId }) =>
     `Subject: Claim Submitted - ${claimId}\n\nHi ${name},\n\nYour claim has been successfully submitted.\nClaim ID: ${claimId}\n\nWe will notify you about the next transition soon.\n\n- ClaimsBuddy`,
@@ -121,16 +153,20 @@ const emailTemplates = {
 };
 
 let currentStep = 1;
-let currentState = 'start';
-let claimContext = {
-  claimId: 'N/A',
-  name: 'Customer',
-  email: '',
-  policy: '',
-  claimItem: '',
-  amount: 0,
-  isComplex: false,
-};
+let selectedClaimId = null;
+let claims = loadClaims();
+
+function formatDate(dateISO) {
+  return new Date(dateISO).toLocaleDateString('en-US');
+}
+
+function formatHKD(amount) {
+  return new Intl.NumberFormat('en-HK', {
+    style: 'currency',
+    currency: 'HKD',
+    maximumFractionDigits: 0,
+  }).format(amount || 0);
+}
 
 function showScreen(screenKey) {
   Object.entries(screens).forEach(([key, screen]) => {
@@ -140,6 +176,11 @@ function showScreen(screenKey) {
   navButtons.forEach((btn) => {
     btn.classList.toggle('is-active', btn.dataset.screen === screenKey);
   });
+
+  if (screenKey === 'status') {
+    renderClaimsList();
+    renderClaimDetail();
+  }
 }
 
 function updateStepUI() {
@@ -159,9 +200,9 @@ function updateStepUI() {
 
   const isSubmittedPage = currentStep === steps.length;
   prevStepBtn.disabled = currentStep === 1 || isSubmittedPage;
+  prevStepBtn.hidden = isSubmittedPage;
   nextStepBtn.hidden = currentStep !== 1;
   submitClaimBtn.hidden = currentStep !== 2;
-  prevStepBtn.hidden = isSubmittedPage;
 }
 
 function validateStep() {
@@ -178,7 +219,6 @@ function validateStep() {
 
   const currentStepEl = steps[currentStep - 1];
   const requiredFields = Array.from(currentStepEl.querySelectorAll('[required]'));
-
   for (const field of requiredFields) {
     if (!field.value.trim()) {
       validationMsg.textContent = 'Please complete all required fields for this stage.';
@@ -233,105 +273,73 @@ function updateClaimItemMeta() {
   claimItemMeta.hidden = false;
 }
 
-function transitionTo(nextState) {
-  currentState = nextState;
-  const labels = {
-    start: 'Start Claim',
-    submitted: 'Claim Submitted',
-    review: 'Under Review',
-    approved: 'Approved',
-    rejected: 'Rejected',
-  };
-
-  stateLabel.textContent = labels[currentState];
-
-  Object.values(nodes).forEach((node) => {
-    node.classList.remove('is-active', 'is-done');
-  });
-
-  const order = ['start', 'submitted', 'review', 'approved'];
-  if (currentState === 'rejected') {
-    nodes.start.classList.add('is-done');
-    nodes.submitted.classList.add('is-done');
-    if (claimContext.isComplex) {
-      nodes.review.classList.add('is-done');
+function loadClaims() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.claims);
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed;
     }
-    nodes.rejected.classList.add('is-active');
-  } else {
-    order.forEach((state, index) => {
-      const activeIndex = order.indexOf(currentState);
-      if (index < activeIndex) {
-        nodes[state].classList.add('is-done');
-      } else if (index === activeIndex) {
-        nodes[state].classList.add('is-active');
-      }
-    });
+  } catch {
+    // Ignore storage parse errors and use demo data.
   }
 
-  const explanations = {
-    start: 'Claim process not started yet.',
-    submitted: 'Claim submitted successfully. Automated checks are running.',
-    review: 'Complex claim detected. Waiting for manual reviewer decision.',
-    approved: 'Claim approved. Settlement flow can now continue.',
-    rejected: 'Claim rejected based on validation or review outcome.',
-  };
-
-  decisionExplainer.textContent = explanations[currentState];
-  reviewActions.hidden = currentState !== 'review';
-
-  if (nextState !== 'start') {
-    sendEmailNotification(nextState);
-  }
+  return [
+    {
+      id: 'PRO-DEMOA21',
+      policy: 'Peace of Mind - Home and Contents Plan',
+      policyNumber: 'POL-789456',
+      claimItem: 'Home Contents Cover',
+      amount: 4500,
+      email: 'demo@claimsbuddy.demo',
+      fullName: 'Demo User',
+      status: 'approved',
+      isComplex: false,
+      updatedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+      notifications: [
+        { state: 'submitted', at: new Date(Date.now() - 86400000 * 3).toISOString() },
+        { state: 'approved', at: new Date(Date.now() - 86400000 * 2).toISOString() },
+      ],
+    },
+    {
+      id: 'PRO-DEMOB34',
+      policy: 'TravelTop - Travel Insurance Plan',
+      policyNumber: 'POL-123789',
+      claimItem: 'Emergency Medical / Hospitalization Overseas',
+      amount: 1200,
+      email: 'demo@claimsbuddy.demo',
+      fullName: 'Demo User',
+      status: 'review',
+      isComplex: true,
+      updatedAt: new Date(Date.now() - 86400000).toISOString(),
+      notifications: [
+        { state: 'submitted', at: new Date(Date.now() - 86400000 * 2).toISOString() },
+        { state: 'review', at: new Date(Date.now() - 86400000).toISOString() },
+      ],
+    },
+  ];
 }
 
-function sendEmailNotification(state) {
-  const templateFn = emailTemplates[state];
-  if (!templateFn) {
-    return;
-  }
-
-  const emailBody = templateFn(claimContext);
-  emailPreview.textContent = emailBody;
-
-  const item = document.createElement('li');
-  item.textContent = `${new Date().toLocaleString()} - ${state.toUpperCase()} email sent to ${claimContext.email || 'user'}`;
-  notificationLog.prepend(item);
-}
-
-function evaluateAutoDecision() {
-  const amount = Number(form.claimAmount.value || 0);
-  const descLength = (form.description.value || '').trim().length;
-
-  claimContext.amount = amount;
-  claimContext.isComplex = amount > 5000 || descLength < 20;
-
-  if (amount <= 2500 && descLength >= 25) {
-    transitionTo('approved');
-    return;
-  }
-
-  if (amount > 2500 && descLength < 25) {
-    transitionTo('rejected');
-    return;
-  }
-
-  transitionTo('review');
+function saveClaims() {
+  localStorage.setItem(STORAGE_KEYS.claims, JSON.stringify(claims));
 }
 
 function getStoredClaimIds() {
+  const fromClaims = claims.map((claim) => claim.id);
   try {
-    const raw = localStorage.getItem('claimsbuddy.generatedClaimIds');
-    const ids = raw ? JSON.parse(raw) : [];
-    return new Set(Array.isArray(ids) ? ids : []);
+    const raw = localStorage.getItem(STORAGE_KEYS.claimIds);
+    const parsed = raw ? JSON.parse(raw) : [];
+    const ids = Array.isArray(parsed) ? parsed : [];
+    return new Set([...ids, ...fromClaims]);
   } catch {
-    return new Set();
+    return new Set(fromClaims);
   }
 }
 
 function storeClaimId(claimId) {
   const ids = getStoredClaimIds();
   ids.add(claimId);
-  localStorage.setItem('claimsbuddy.generatedClaimIds', JSON.stringify(Array.from(ids)));
+  localStorage.setItem(STORAGE_KEYS.claimIds, JSON.stringify(Array.from(ids)));
 }
 
 function generateUniqueClaimId() {
@@ -355,13 +363,158 @@ function generateUniqueClaimId() {
   return fallback;
 }
 
+function determineAutoStatus(amount, description) {
+  const descLength = description.trim().length;
+
+  if (amount <= 2500 && descLength >= 25) {
+    return { status: 'approved', isComplex: false };
+  }
+
+  if (amount > 2500 && descLength < 25) {
+    return { status: 'rejected', isComplex: false };
+  }
+
+  return { status: 'review', isComplex: true };
+}
+
+function addNotification(claim, state) {
+  claim.notifications = claim.notifications || [];
+  claim.notifications.push({ state, at: new Date().toISOString() });
+}
+
+function renderClaimsList() {
+  if (!claims.length) {
+    claimsListEl.innerHTML = `
+      <article class="empty-claims">
+        <h3>No claims yet</h3>
+        <p class="muted">Start your first claim to see tracking details here.</p>
+        <button class="btn btn-primary" id="empty-start-claim">File New Claim</button>
+      </article>
+    `;
+    return;
+  }
+
+  const sorted = [...claims].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+  claimsListEl.innerHTML = sorted
+    .map((claim) => {
+      const cfg = statusConfig[claim.status] || statusConfig.submitted;
+      const selectedClass = claim.id === selectedClaimId ? 'is-selected' : '';
+      return `
+        <article class="claim-card status-card-${claim.status} ${selectedClass}" data-claim-id="${claim.id}">
+          <div class="claim-card-top">
+            <div class="claim-card-id-wrap">
+              <span class="claim-doc-icon"><i class="bi bi-file-earmark-text"></i></span>
+              <div>
+                <h3>${claim.id}</h3>
+                <p class="muted">Policy: ${claim.policyNumber}</p>
+              </div>
+            </div>
+            <span class="status-badge ${cfg.badgeClass}"><i class="bi ${cfg.icon}"></i> ${cfg.label}</span>
+          </div>
+          <div class="claim-card-meta">
+            <div>
+              <p class="meta-label">Claim Item</p>
+              <p class="meta-value">${claim.claimItem}</p>
+            </div>
+            <div>
+              <p class="meta-label">Claim Amount</p>
+              <p class="meta-value">${formatHKD(claim.amount)}</p>
+            </div>
+            <div>
+              <p class="meta-label">Last Updated</p>
+              <p class="meta-value">${formatDate(claim.updatedAt)}</p>
+            </div>
+          </div>
+          <button type="button" class="ask-btn"><i class="bi bi-chat-left-text"></i> Ask Claim Buddy</button>
+        </article>
+      `;
+    })
+    .join('');
+}
+
+function getSelectedClaim() {
+  if (!selectedClaimId) {
+    return null;
+  }
+  return claims.find((claim) => claim.id === selectedClaimId) || null;
+}
+
+function renderClaimDetail() {
+  const claim = getSelectedClaim();
+  if (!claim) {
+    claimDetailEl.hidden = true;
+    return;
+  }
+
+  const cfg = statusConfig[claim.status] || statusConfig.submitted;
+  claimDetailEl.hidden = false;
+
+  detailClaimId.textContent = claim.id;
+  detailHeadline.textContent = cfg.detail;
+  detailStatusBadge.className = `status-badge ${cfg.badgeClass}`;
+  detailStatusBadge.innerHTML = `<i class="bi ${cfg.icon}"></i> ${cfg.label}`;
+  detailPolicy.textContent = `${claim.policy} (${claim.policyNumber})`;
+  detailItem.textContent = claim.claimItem;
+  detailAmount.textContent = formatHKD(claim.amount);
+  detailUpdated.textContent = formatDate(claim.updatedAt);
+
+  detailReviewActions.hidden = claim.status !== 'review';
+
+  const latestState = claim.notifications?.length
+    ? claim.notifications[claim.notifications.length - 1].state
+    : claim.status;
+  const templateFn = emailTemplates[latestState] || emailTemplates.submitted;
+  emailPreview.textContent = templateFn({
+    name: claim.fullName || 'Customer',
+    claimId: claim.id,
+  });
+
+  const notifications = (claim.notifications || []).slice().reverse();
+  notificationLog.innerHTML = notifications
+    .map((item) => `<li>${new Date(item.at).toLocaleString()} - ${item.state.toUpperCase()} update sent</li>`)
+    .join('');
+}
+
+function setSelectedClaim(claimId) {
+  selectedClaimId = claimId;
+  renderClaimsList();
+  renderClaimDetail();
+}
+
+function updateClaimStatus(claimId, nextStatus) {
+  const claim = claims.find((item) => item.id === claimId);
+  if (!claim) {
+    return;
+  }
+
+  claim.status = nextStatus;
+  claim.updatedAt = new Date().toISOString();
+  addNotification(claim, nextStatus);
+  saveClaims();
+  renderClaimsList();
+  renderClaimDetail();
+}
+
+function resetClaimFlow() {
+  form.reset();
+  validationMsg.textContent = '';
+  currentStep = 1;
+  setClaimItemOptions('');
+  updateStepUI();
+}
+
 navButtons.forEach((btn) => {
   btn.addEventListener('click', () => {
-    showScreen(btn.dataset.screen);
+    const target = btn.dataset.screen;
+    if (target === 'form') {
+      resetClaimFlow();
+    }
+    showScreen(target);
   });
 });
 
 startClaimBtn.addEventListener('click', () => {
+  resetClaimFlow();
   showScreen('form');
 });
 
@@ -398,20 +551,31 @@ form.addEventListener('submit', (event) => {
   const selectedPolicy = policyCatalog[policySelect.value];
   const selectedItem = getSelectedItem();
   const generatedId = generateUniqueClaimId();
-  submittedClaimId.textContent = generatedId;
+  const decision = determineAutoStatus(Number(form.claimAmount.value || 0), form.description.value || '');
 
-  claimContext = {
-    claimId: generatedId,
-    name: form.fullName.value.trim(),
-    email: form.email.value.trim(),
+  const claim = {
+    id: generatedId,
     policy: selectedPolicy ? selectedPolicy.label : '',
-    claimItem: selectedItem ? selectedItem.label : '',
+    policyNumber: form.policyNumber.value.trim(),
+    claimItem: selectedItem ? selectedItem.label : 'Unknown item',
     amount: Number(form.claimAmount.value || 0),
-    isComplex: false,
+    email: form.email.value.trim(),
+    fullName: form.fullName.value.trim(),
+    status: decision.status,
+    isComplex: decision.isComplex,
+    updatedAt: new Date().toISOString(),
+    notifications: [],
   };
 
-  transitionTo('submitted');
-  evaluateAutoDecision();
+  addNotification(claim, 'submitted');
+  if (decision.status !== 'submitted') {
+    addNotification(claim, decision.status);
+  }
+
+  claims.unshift(claim);
+  saveClaims();
+  submittedClaimId.textContent = generatedId;
+  setSelectedClaim(generatedId);
 
   currentStep = 3;
   updateStepUI();
@@ -421,15 +585,41 @@ viewStatusBtn.addEventListener('click', () => {
   showScreen('status');
 });
 
-approveBtn.addEventListener('click', () => {
-  transitionTo('approved');
+claimsListEl.addEventListener('click', (event) => {
+  const startButton = event.target.closest('#empty-start-claim');
+  if (startButton) {
+    resetClaimFlow();
+    showScreen('form');
+    return;
+  }
+
+  const claimCard = event.target.closest('[data-claim-id]');
+  if (!claimCard) {
+    return;
+  }
+
+  setSelectedClaim(claimCard.dataset.claimId);
 });
 
-rejectBtn.addEventListener('click', () => {
-  transitionTo('rejected');
+detailApproveBtn.addEventListener('click', () => {
+  if (selectedClaimId) {
+    updateClaimStatus(selectedClaimId, 'approved');
+  }
 });
+
+detailRejectBtn.addEventListener('click', () => {
+  if (selectedClaimId) {
+    updateClaimStatus(selectedClaimId, 'rejected');
+  }
+});
+
+if (claims.length) {
+  selectedClaimId = claims[0].id;
+  saveClaims();
+}
 
 updateStepUI();
 setClaimItemOptions('');
-transitionTo('start');
+renderClaimsList();
+renderClaimDetail();
 showScreen('intro');

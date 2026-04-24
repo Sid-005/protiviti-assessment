@@ -267,63 +267,57 @@
 
       <section class="screen" id="screen-status" aria-labelledby="status-title">
         <article class="card reveal">
-          <h2 id="status-title">Claim Status</h2>
-          <p class="muted">Track progress and simulate transitions in this demo.</p>
+          <h2 id="status-title">My Claims</h2>
+          <p class="muted">Track and manage all your submitted claims.</p>
 
-          <div class="timeline" id="status-timeline" aria-label="Claim lifecycle">
-            <div class="node" data-state="start">
-              <span class="dot"></span>
-              <span>Start Claim</span>
-            </div>
-            <div class="line"></div>
-            <div class="node" data-state="submitted">
-              <span class="dot"></span>
-              <span>Claim Submitted</span>
-            </div>
-            <div class="line"></div>
-            <div class="node" data-state="review">
-              <span class="dot"></span>
-              <span>Under Review</span>
-            </div>
-            <div class="line"></div>
-            <div class="node" data-state="approved">
-              <span class="dot"></span>
-              <span>Approved</span>
-            </div>
-            <div class="line"></div>
-            <div class="node reject-node" data-state="rejected">
-              <span class="dot"></span>
-              <span>Rejected</span>
-            </div>
-          </div>
+          <section id="claims-list" class="claims-list" aria-label="Claims list"></section>
 
-          <div class="status-panel">
-            <p>
-              Current State:
-              <strong id="current-state">Start Claim</strong>
-            </p>
-            <p id="decision-explainer" class="muted">
-              Submit a claim to trigger auto-decision rules or manual review.
-            </p>
-          </div>
+          <article class="claim-detail" id="claim-detail" hidden>
+            <div class="claim-detail-head">
+              <div>
+                <h3 id="detail-claim-id">Claim</h3>
+                <p id="detail-headline" class="muted">Claim details</p>
+              </div>
+              <span class="status-badge" id="detail-status-badge">Status</span>
+            </div>
 
-          <div class="review-actions" id="review-actions" hidden>
-            <button class="btn btn-accent" id="approve-btn">Approve Claim</button>
-            <button class="btn btn-danger" id="reject-btn">Reject Claim</button>
-          </div>
+            <div class="claim-meta-grid">
+              <div class="claim-meta-item">
+                <p class="meta-label">Policy</p>
+                <p class="meta-value" id="detail-policy">-</p>
+              </div>
+              <div class="claim-meta-item">
+                <p class="meta-label">Claim Item</p>
+                <p class="meta-value" id="detail-item">-</p>
+              </div>
+              <div class="claim-meta-item">
+                <p class="meta-label">Claim Amount</p>
+                <p class="meta-value" id="detail-amount">-</p>
+              </div>
+              <div class="claim-meta-item">
+                <p class="meta-label">Last Updated</p>
+                <p class="meta-value" id="detail-updated">-</p>
+              </div>
+            </div>
 
-          <div class="status-grid">
-            <article class="email-preview">
-              <h3>Latest Email Notification</h3>
-              <p class="muted">Sent on each transition except Start Claim.</p>
-              <pre id="email-template-preview">No notifications sent yet.</pre>
-            </article>
+            <div class="review-actions" id="detail-review-actions" hidden>
+              <button class="btn btn-accent" id="detail-approve-btn">Approve Claim</button>
+              <button class="btn btn-danger" id="detail-reject-btn">Reject Claim</button>
+            </div>
 
-            <article class="email-log">
-              <h3>Notification Log</h3>
-              <ul id="notification-log"></ul>
-            </article>
-          </div>
+            <div class="status-grid">
+              <article class="email-preview">
+                <h3>Latest Email Notification</h3>
+                <p class="muted">Sent on each transition except Start Claim.</p>
+                <pre id="email-template-preview">No notifications sent yet.</pre>
+              </article>
+
+              <article class="email-log">
+                <h3>Notification Log</h3>
+                <ul id="notification-log"></ul>
+              </article>
+            </div>
+          </article>
         </article>
       </section>
     </main>
