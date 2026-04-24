@@ -57,6 +57,7 @@ const policyCatalog = {
         maxPayout: 'HKD 10,000',
         maxPayoutAmount: 10000,
         submitWithin: '10 days',
+        submitWithinDays: 10,
       },
       {
         id: 'home-contents-cover',
@@ -65,6 +66,7 @@ const policyCatalog = {
         maxPayout: 'HKD 30,000',
         maxPayoutAmount: 30000,
         submitWithin: '30 days',
+        submitWithinDays: 30,
       },
       {
         id: 'home-personal-liability',
@@ -73,6 +75,7 @@ const policyCatalog = {
         maxPayout: 'HKD 100,000',
         maxPayoutAmount: 100000,
         submitWithin: '15 days',
+        submitWithinDays: 15,
       },
       {
         id: 'home-burst-pipe',
@@ -81,6 +84,7 @@ const policyCatalog = {
         maxPayout: 'HKD 5,000',
         maxPayoutAmount: 5000,
         submitWithin: '7 days',
+        submitWithinDays: 7,
       },
     ],
   },
@@ -94,6 +98,7 @@ const policyCatalog = {
         maxPayout: 'HKD 1,000',
         maxPayoutAmount: 1000,
         submitWithin: '14 days',
+        submitWithinDays: 14,
       },
       {
         id: 'travel-gadget-protection',
@@ -102,6 +107,7 @@ const policyCatalog = {
         maxPayout: 'HKD 10,000',
         maxPayoutAmount: 10000,
         submitWithin: '14 days',
+        submitWithinDays: 14,
       },
       {
         id: 'travel-lost-baggage',
@@ -110,6 +116,7 @@ const policyCatalog = {
         maxPayout: 'HKD 5,000',
         maxPayoutAmount: 5000,
         submitWithin: '7 days',
+        submitWithinDays: 7,
       },
       {
         id: 'travel-emergency-medical',
@@ -118,6 +125,7 @@ const policyCatalog = {
         maxPayout: 'HKD 40,000',
         maxPayoutAmount: 40000,
         submitWithin: '10 days',
+        submitWithinDays: 10,
       },
     ],
   },
@@ -131,6 +139,7 @@ const policyCatalog = {
         maxPayout: '-',
         maxPayoutAmount: null,
         submitWithin: '-',
+        submitWithinDays: null,
       },
     ],
   },
@@ -395,10 +404,22 @@ function generateUniqueClaimId() {
   return fallback;
 }
 
-function evaluateClaimDecision({ policyKey, claimItemId, selectedItem, amount, selectedDocumentIds }) {
+function evaluateClaimDecision({
+  policyKey,
+  claimItemId,
+  selectedItem,
+  amount,
+  selectedDocumentIds,
+  incidentDate,
+}) {
   const missingDocuments = requiredDocuments
     .filter((doc) => !selectedDocumentIds.includes(doc.id))
     .map((doc) => doc.label);
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const incident = incidentDate ? new Date(`${incidentDate}T00:00:00`) : null;
+  const incidentDaysOld = incident ? Math.floor((today - incident) / 86400000) : null;
 
   if (policyKey === 'other' || claimItemId === 'other') {
     return {
@@ -419,21 +440,50 @@ function evaluateClaimDecision({ policyKey, claimItemId, selectedItem, amount, s
     };
   }
 
-  if (amount > selectedItem.maxPayoutAmount) {
+  const reviewReasons = [];
+  const rejectReasons = [];
+
+  if (incidentDaysOld == null || Number.isNaN(incidentDaysOld)) {
+    reviewReasons.push('Incident date could not be validated.');
+  } else {
+    if (incidentDaysOld < 0) {
+      reviewReasons.push('Incident date is in the future and requires manual validation.');
+    }
+
+    if (
+      selectedItem.submitWithinDays != null &&
+      incidentDaysOld > selectedItem.submitWithinDays
+    ) {
+      rejectReasons.push(
+        `Incident occurred ${incidentDaysOld} days ago, exceeding the submission window of ${selectedItem.submitWithinDays} days for this claim item.`,
+      );
+    }
+  }
+
+  if (rejectReasons.length > 0) {
     return {
-      status: 'review',
-      isComplex: true,
-      reason:
-        `Claim amount exceeds maximum payout (${selectedItem.maxPayout}) allocated to this policy item and requires manual review.`,
+      status: 'rejected',
+      isComplex: false,
+      reason: rejectReasons.join(' '),
       missingDocuments,
     };
   }
 
+  if (amount > selectedItem.maxPayoutAmount) {
+    reviewReasons.push(
+      `Claim amount exceeds maximum payout (${selectedItem.maxPayout}) allocated to this policy item and requires manual review.`,
+    );
+  }
+
   if (missingDocuments.length > 0) {
+    reviewReasons.push(`Incomplete documents. Missing: ${missingDocuments.join(', ')}.`);
+  }
+
+  if (reviewReasons.length > 0) {
     return {
       status: 'review',
       isComplex: true,
-      reason: `Incomplete documents. Missing: ${missingDocuments.join(', ')}.`,
+      reason: reviewReasons.join(' '),
       missingDocuments,
     };
   }
@@ -632,6 +682,7 @@ form.addEventListener('submit', (event) => {
     selectedItem,
     amount: Number(form.claimAmount.value || 0),
     selectedDocumentIds,
+    incidentDate: form.incidentDate.value,
   });
 
   const claim = {
