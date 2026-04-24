@@ -470,13 +470,22 @@ function evaluateClaimDecision({
   }
 
   if (amount > selectedItem.maxPayoutAmount) {
-    reviewReasons.push(
-      `Claim amount exceeds maximum payout (${selectedItem.maxPayout}) allocated to this policy item and requires manual review.`,
+    rejectReasons.push(
+      `Claim amount exceeds maximum payout (${selectedItem.maxPayout}) allocated to this policy item and is auto-rejected.`,
     );
   }
 
   if (missingDocuments.length > 0) {
     reviewReasons.push(`Incomplete documents. Missing: ${missingDocuments.join(', ')}.`);
+  }
+
+  if (rejectReasons.length > 0) {
+    return {
+      status: 'rejected',
+      isComplex: false,
+      reason: rejectReasons.join(' '),
+      missingDocuments,
+    };
   }
 
   if (reviewReasons.length > 0) {
