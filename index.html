@@ -35,11 +35,16 @@
             confidence. The demo focuses on a smooth claim journey and proactive notifications at
             every important transition.
           </p>
+          <div class="hero-tags" aria-label="Design highlights">
+            <span class="tag">UI-first demo</span>
+            <span class="tag">Auto decisioning</span>
+            <span class="tag">Email transition alerts</span>
+          </div>
           <button class="btn btn-primary" id="start-claim-btn">Start a Claim</button>
         </div>
 
         <div class="grid-two">
-          <article class="card reveal delay-1">
+          <article class="card journey-card reveal delay-1">
             <h2>Claim Journey</h2>
             <ol class="journey-list">
               <li>Start Claim</li>
@@ -53,7 +58,7 @@
             </p>
           </article>
 
-          <article class="card reveal delay-2">
+          <article class="card docs-card reveal delay-2">
             <h2>Documents Required</h2>
             <ul class="doc-list">
               <li>Government-issued photo ID</li>
@@ -76,6 +81,12 @@
               <div class="progress-fill" id="form-progress-fill"></div>
             </div>
             <p id="form-progress-label">Step 1 of 4</p>
+            <div class="step-pills" aria-hidden="true">
+              <span class="step-pill is-active" data-step-pill="1">1 Details</span>
+              <span class="step-pill" data-step-pill="2">2 Incident</span>
+              <span class="step-pill" data-step-pill="3">3 Documents</span>
+              <span class="step-pill" data-step-pill="4">4 Review</span>
+            </div>
           </div>
 
           <form id="claim-form" novalidate>
@@ -210,16 +221,18 @@
             <button class="btn btn-danger" id="reject-btn">Reject Claim</button>
           </div>
 
-          <article class="email-preview">
-            <h3>Latest Email Notification</h3>
-            <p class="muted">Sent on each transition except Start Claim.</p>
-            <pre id="email-template-preview">No notifications sent yet.</pre>
-          </article>
+          <div class="status-grid">
+            <article class="email-preview">
+              <h3>Latest Email Notification</h3>
+              <p class="muted">Sent on each transition except Start Claim.</p>
+              <pre id="email-template-preview">No notifications sent yet.</pre>
+            </article>
 
-          <article class="email-log">
-            <h3>Notification Log</h3>
-            <ul id="notification-log"></ul>
-          </article>
+            <article class="email-log">
+              <h3>Notification Log</h3>
+              <ul id="notification-log"></ul>
+            </article>
+          </div>
         </article>
       </section>
     </main>

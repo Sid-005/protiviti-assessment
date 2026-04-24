@@ -13,6 +13,7 @@ const submitClaimBtn = document.getElementById('submit-claim-btn');
 const progressFill = document.getElementById('form-progress-fill');
 const progressLabel = document.getElementById('form-progress-label');
 const validationMsg = document.getElementById('validation-msg');
+const stepPills = Array.from(document.querySelectorAll('[data-step-pill]'));
 
 const stateLabel = document.getElementById('current-state');
 const decisionExplainer = document.getElementById('decision-explainer');
@@ -65,6 +66,12 @@ function showScreen(screenKey) {
 function updateStepUI() {
   steps.forEach((step) => {
     step.classList.toggle('is-visible', Number(step.dataset.step) === currentStep);
+  });
+
+  stepPills.forEach((pill) => {
+    const pillStep = Number(pill.dataset.stepPill);
+    pill.classList.toggle('is-active', pillStep === currentStep);
+    pill.classList.toggle('is-complete', pillStep < currentStep);
   });
 
   const percent = (currentStep / steps.length) * 100;
